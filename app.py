@@ -51,4 +51,40 @@ if st.button("🚀 Run AI Analysis"):
             
             with st.spinner("Analyzing papers... please wait."):
                 syl_content = get_pdf_text([syllabus_file])
-                exam_content = get_pdf_
+                exam_content = get_pdf_text(exam_files)
+
+                prompt = rf"""
+                You are a senior academic consultant for SPPU Engineering. 
+                Analyze these documents to help a student focus their studies.
+                
+                SYLLABUS: {syl_content[:10000]}
+                PAST PAPERS: {exam_content[:20000]}
+
+                Format your response clearly:
+                ### 1. 📈 Unit-Wise Weightage
+                (Estimate marks for In-Sem vs End-Sem)
+                ### 2. 🔥 The Gold List
+                (Top 5 repeated topics across papers)
+                ### 3. 🎯 Predicted Questions
+                (5 high-probability questions for the next exam)
+                ### 4. 💡 Study Roadmap
+                (A 3-day plan for revision)
+                """
+
+                response = client.models.generate_content(
+                    model="gemini-3-flash-preview",
+                    contents=prompt
+                )
+                
+                st.success("Analysis Complete!")
+                st.markdown("---")
+                st.markdown(response.text)
+
+        except Exception as e:
+            st.error(f"Application Error: {e}")
+    else:
+        st.info("Please upload both the syllabus and exam papers to begin.")
+
+# --- 5. FOOTER ---
+st.sidebar.markdown("---")
+st.sidebar.caption("v2.5 | SPPU Engineering Success Tool")
