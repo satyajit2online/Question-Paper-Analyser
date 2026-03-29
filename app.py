@@ -9,8 +9,6 @@ st.title("🎓 SPPU Syllabus & Exam Pattern Analyzer")
 st.markdown("Automated Pattern Analysis for Engineering Students.")
 
 # --- 2. API KEY SETUP ---
-# Priority 1: Streamlit Secrets (for published app)
-# Priority 2: Sidebar Input (for local testing)
 if "GEMINI_API_KEY" in st.secrets:
     api_key = st.secrets["GEMINI_API_KEY"]
 else:
@@ -40,7 +38,7 @@ with col2:
 
 if st.button("🚀 Run AI Analysis"):
     if not api_key:
-        st.warning("Please provide an API Key in the sidebar or Secrets.")
+        st.warning("Please provide an API Key.")
     elif syllabus_file and exam_files:
         try:
             # Initialize the 2026 SDK Client
@@ -78,5 +76,6 @@ if st.button("🚀 Run AI Analysis"):
     else:
         st.info("Please upload both the syllabus and exam papers to begin.")
 
+# --- 5. FOOTER ---
 st.sidebar.markdown("---")
-st.sidebar.caption("v
+st.sidebar.caption("v2.1 | SPPU Engineering Analyzer")
