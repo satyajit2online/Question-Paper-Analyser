@@ -6,13 +6,18 @@ from pypdf import PdfReader
 st.set_page_config(page_title="SPPU Exam AI", layout="wide", page_icon="🎓")
 
 st.title("🎓 SPPU Syllabus & Exam Pattern Analyzer")
-st.markdown("Automated Pattern Analysis for Engineering Students.")
+st.markdown("Automated Pattern Analysis for Savitribai Phule Pune University.")
 
-# --- 2. API KEY SETUP ---
-if "GEMINI_API_KEY" in st.secrets:
-    api_key = st.secrets["GEMINI_API_KEY"]
+# --- 2. SECURE API SETUP ---
+# It looks for "GEMINI_API_KEY" in the Streamlit Cloud Secrets dashboard.
+# If found, the sidebar input will stay hidden.
+api_key = st.secrets.get("GEMINI_API_KEY")
+
+if api_key:
+    st.sidebar.success("✅ Connected to SPPU AI Engine")
 else:
-    api_key = st.sidebar.text_input("Enter Gemini API Key (Dev Mode)", type="password")
+    st.sidebar.warning("⚠️ Developer Mode: Secret Key Not Found")
+    api_key = st.sidebar.text_input("Enter Gemini API Key (Manual)", type="password")
 
 # --- 3. PDF EXTRACTION HELPER ---
 def get_pdf_text(pdf_docs):
@@ -31,51 +36,19 @@ def get_pdf_text(pdf_docs):
 col1, col2 = st.columns(2)
 with col1:
     st.subheader("Step 1: Upload Syllabus")
-    syllabus_file = st.file_uploader("Upload Syllabus PDF", type="pdf")
+    syllabus_file = st.file_uploader("Upload Syllabus PDF", type="pdf", key="syl")
 with col2:
     st.subheader("Step 2: Upload Past Papers")
-    exam_files = st.file_uploader("Upload Question Papers", type="pdf", accept_multiple_files=True)
+    exam_files = st.file_uploader("Upload Question Papers", type="pdf", accept_multiple_files=True, key="papers")
 
 if st.button("🚀 Run AI Analysis"):
     if not api_key:
-        st.warning("Please provide an API Key.")
+        st.error("Missing API Key. Please add it to Streamlit Secrets.")
     elif syllabus_file and exam_files:
         try:
             # Initialize the 2026 SDK Client
             client = genai.Client(api_key=api_key)
             
             with st.spinner("Analyzing papers... please wait."):
-                # Extract text
                 syl_content = get_pdf_text([syllabus_file])
-                exam_content = get_pdf_text(exam_files)
-
-                # Construct Prompt
-                prompt = rf"""
-                Analyze these SPPU Engineering documents.
-                SYLLABUS: {syl_content[:10000]}
-                PAST PAPERS: {exam_content[:20000]}
-
-                Provide:
-                1. UNIT WEIGHTAGE: High vs Low priority units.
-                2. THE GOLD LIST: Most repeated topics.
-                3. PREDICTIONS: 5 likely questions for the next exam.
-                """
-
-                # Generate Content
-                response = client.models.generate_content(
-                    model="gemini-3-flash-preview",
-                    contents=prompt
-                )
-                
-                st.success("Analysis Complete!")
-                st.markdown("---")
-                st.markdown(response.text)
-
-        except Exception as e:
-            st.error(f"Application Error: {e}")
-    else:
-        st.info("Please upload both the syllabus and exam papers to begin.")
-
-# --- 5. FOOTER ---
-st.sidebar.markdown("---")
-st.sidebar.caption("v2.1 | SPPU Engineering Analyzer")
+                exam_content = get_pdf_
