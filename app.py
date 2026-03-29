@@ -2,93 +2,64 @@ import streamlit as st
 from google import genai
 from pypdf import PdfReader
 
-# --- 1. PAGE CONFIGURATION ---
-st.set_page_config(page_title="SPPU AI Exam Analyzer 2026", layout="wide", page_icon="📚")
+# --- 1. PAGE & STYLE ---
+st.set_page_config(page_title="SPPU Exam AI", layout="wide", page_icon="🎓")
 
-st.title("📚 SPPU Syllabus & Exam Paper Analyzer")
-st.markdown("Automated Analysis for Savitribai Phule Pune University Engineering Curriculum.")
+# Custom CSS for a professional look
+st.markdown("""
+    <style>
+    .stButton>button { width: 100%; border-radius: 5px; height: 3em; background-color: #007bff; color: white; }
+    .report-text { font-size: 1.1rem; line-height: 1.6; }
+    </style>
+    """, unsafe_allow_html=True)
 
-# --- 2. SIDEBAR SETUP ---
-st.sidebar.header("Settings")
-api_key = st.sidebar.text_input("Enter Gemini API Key", type="password")
+st.title("🎓 SPPU Syllabus & Exam Pattern Analyzer")
+st.info("Upload your Syllabus and Past Papers to generate an AI-powered success roadmap.")
 
-# Updated 2026 Model Selection
-model_options = {
-    "Gemini 3.1 Pro (Best Reasoning)": "gemini-3.1-pro-preview",
-    "Gemini 3 Flash (Fast & Balanced)": "gemini-3-flash-preview",
-    "Gemini 2.5 Pro (Stable Deep Analysis)": "gemini-2.5-pro"
-}
-selected_model_name = st.sidebar.selectbox("Select AI Model", list(model_options.keys()))
-model_id = model_options[selected_model_name]
-
-# --- 3. HELPER FUNCTIONS ---
-def get_pdf_text(pdf_docs):
-    text = ""
-    for pdf in pdf_docs:
-        try:
-            pdf_reader = PdfReader(pdf)
-            for page in pdf_reader.pages:
-                extracted = page.extract_text()
-                if extracted: text += extracted
-        except Exception as e:
-            st.error(f"Error reading PDF: {e}")
-    return text
-
-# --- 4. MAIN LOGIC ---
-if api_key:
-    try:
-        # Initializing the 2026 Client
-        client = genai.Client(api_key=api_key)
-        
-        col1, col2 = st.columns(2)
-        with col1:
-            st.subheader("Step 1: Upload Syllabus")
-            syllabus_file = st.file_uploader("Upload Syllabus PDF", type="pdf")
-            
-        with col2:
-            st.subheader("Step 2: Upload Past Papers")
-            exam_files = st.file_uploader("Upload Question Papers", type="pdf", accept_multiple_files=True)
-
-        if st.button("🚀 Analyze Exam Pattern"):
-            if syllabus_file and exam_files:
-                with st.spinner(f"Analyzing using {selected_model_name}..."):
-                    syllabus_content = get_pdf_text([syllabus_file])
-                    exams_content = get_pdf_text(exam_files)
-
-                    prompt = rf"""
-You are an expert academic analyst for SPPU. Analyze the Syllabus and Past Papers.
-
-SYLLABUS: {syllabus_content[:10000]} 
-PAST PAPERS: {exams_content[:20000]}
-
-Format:
-### 1. 📈 Unit-Wise Weightage
-Identify In-Sem (30m) vs End-Sem (70m) focus units.
-### 2. 🔥 The Gold List
-Repeated topics (3+ appearances).
-### 3. 🎯 Predicted Questions
-5 high-probability questions with difficulty ratings.
-### 4. 💡 Smart Study Strategy
-80/20 rule application for this subject.
-"""
-                    try:
-                        # Updated Generation Call
-                        response = client.models.generate_content(
-                            model=model_id,
-                            contents=prompt
-                        )
-                        st.success("Analysis Complete!")
-                        st.markdown("---")
-                        st.markdown(response.text)
-                    except Exception as e:
-                        st.error(f"AI Generation Error: {e}")
-                        st.info("If you see a 404, please check if your API key has 'Gemini 3' enabled in Google AI Studio.")
-            else:
-                st.warning("Please upload all required PDFs.")
-                
-    except Exception as e:
-        st.error(f"Client Configuration Error: {e}")
+# --- 2. SECURE API CONFIGURATION ---
+# Checks Streamlit Secrets first, then falls back to sidebar for local testing
+if "GEMINI_API_KEY" in st.secrets:
+    api_key = st.secrets["GEMINI_API_KEY"]
 else:
-    st.info("👋 Enter your API Key in the sidebar to begin.")
+    with st.sidebar:
+        st.warning("API Key not found in Secrets.")
+        api_key = st.text_input("Enter API Key for Local Testing", type="password")
 
-st.caption("2026 Edition | SPPU Engineering Success Tool")
+# --- 3. CORE FUNCTIONS ---
+def extract_text_from_pdfs(pdf_list):
+    full_text = ""
+    for pdf in pdf_list:
+        try:
+            reader = PdfReader(pdf)
+            for page in reader.pages:
+                content = page.extract_text()
+                if content: full_text += content + "\n"
+        except Exception as e:
+            st.error(f"Error reading {pdf.name}: {e}")
+    return full_text
+
+# --- 4. APP LAYOUT ---
+col1, col2 = st.columns(2)
+
+with col1:
+    st.subheader("📋 Step 1: Syllabus")
+    syllabus_file = st.file_uploader("Upload PDF", type="pdf", key="syl")
+
+with col2:
+    st.subheader("📝 Step 2: Past Papers")
+    paper_files = st.file_uploader("Upload one or more PDFs", type="pdf", accept_multiple_files=True, key="papers")
+
+if st.button("🚀 Generate Success Blueprint"):
+    if not api_key:
+        st.error("Please provide an API Key to continue.")
+    elif syllabus_file and paper_files:
+        try:
+            # Initialize 2026 Client
+            client = genai.Client(api_key=api_key)
+            
+            with st.spinner("Analyzing SPPU patterns... this takes about 30 seconds."):
+                # Process Data
+                syl_text = extract_text_from_pdfs([syllabus_file])
+                exam_text = extract_text_from_pdfs(paper_files)
+
+                # 2026 Ref
